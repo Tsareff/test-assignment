@@ -1,11 +1,34 @@
-import React from "react";
+import React, { useState } from "react";
 import gql from "graphql-tag";
 import { useQuery } from "@apollo/react-hooks";
-import { Spinner, Alert } from "reactstrap";
+import {
+  TabContent,
+  TabPane,
+  Spinner,
+  Nav,
+  NavItem,
+  NavLink,
+  Badge,
+  Alert
+} from "reactstrap";
+import { PullRequests } from "../PullRequests/PullRequests";
+import { IssuesList } from "../IssuesList/IssuesList";
+import { getOpenedIssues, getClosedIssues } from "../../utils/issues";
+import Styles from "./RepoContent.module.css";
+import {
+  RepositoryQuery,
+  RepositoryQueryVariables
+} from "../../types/Repository";
 
 interface Props {
   name: string;
   owner: string;
+}
+
+enum RepoTabs {
+  PULL_REQUESTS = "PULL_REQUESTS",
+  OPENED_ISSUES = "OPENED_ISSUES",
+  CLOSED_ISSUES = "CLOSED_ISSUES"
 }
 
 const GET_REPO_QUERY = gql`
@@ -63,8 +86,22 @@ const GET_REPO_QUERY = gql`
   }
 `;
 
+const TABS = [
+  {
+    type: RepoTabs.PULL_REQUESTS,
+    label: "Pull Requests"
+  },
+  { type: RepoTabs.OPENED_ISSUES, label: "Open issues" },
+  { type: RepoTabs.CLOSED_ISSUES, label: "Closed issues" }
+];
+
 export const RepoContent: React.FC<Props> = ({ name, owner }) => {
-  const { loading, data, error } = useQuery(GET_REPO_QUERY, {
+  const [activeTab, setActiveTab] = useState(RepoTabs.PULL_REQUESTS);
+
+  const { loading, data, error } = useQuery<
+    RepositoryQuery,
+    RepositoryQueryVariables
+  >(GET_REPO_QUERY, {
     variables: { name, owner }
   });
 
@@ -76,5 +113,51 @@ export const RepoContent: React.FC<Props> = ({ name, owner }) => {
     return <Alert color="danger">There is no such a repo</Alert>;
   }
 
-  return <div>Repo content</div>;
+  const repository = data.repository;
+
+  const pullRequests = repository.pullRequests;
+
+  const issues = repository.issues;
+
+  const openedIssues = getOpenedIssues(issues.nodes);
+
+  const closedIssues = getClosedIssues(issues.nodes);
+
+  const tabsWithCount = [
+    pullRequests.totalCount,
+    openedIssues.length,
+    closedIssues.length
+  ].map((count, i) => ({
+    ...TABS[i],
+    count
+  }));
+
+  return (
+    <div>
+      <Nav tabs>
+        {tabsWithCount.map(({ type, label, count }) => (
+          <NavItem key={type}>
+            <NavLink
+              active={activeTab === type}
+              onClick={() => setActiveTab(type)}
+              className={Styles.tab}
+            >
+              {label} <Badge color="secondary">{count}</Badge>
+            </NavLink>
+          </NavItem>
+        ))}
+      </Nav>
+      <TabContent activeTab={activeTab}>
+        <TabPane tabId={RepoTabs.PULL_REQUESTS}>
+          <PullRequests pullRequests={pullRequests.nodes} />
+        </TabPane>
+        <TabPane tabId={RepoTabs.OPENED_ISSUES}>
+          <IssuesList issues={openedIssues} />
+        </TabPane>
+        <TabPane tabId={RepoTabs.CLOSED_ISSUES}>
+          <IssuesList issues={closedIssues} />
+        </TabPane>
+      </TabContent>
+    </div>
+  );
 };
