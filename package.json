@@ -18,11 +18,14 @@
     "apollo-link-context": "^1.0.19",
     "apollo-link-http": "^1.5.16",
     "bootstrap": "^4.4.1",
+    "cross-env": "^7.0.2",
     "date-fns": "^2.10.0",
     "enzyme": "^3.11.0",
     "enzyme-adapter-react-16": "^1.15.2",
     "graphql": "^14.6.0",
     "graphql-tag": "^2.10.3",
+    "husky": "^4.2.3",
+    "lint-staged": "^10.0.8",
     "react": "^16.13.0",
     "react-apollo": "^3.1.3",
     "react-dom": "^16.13.0",
@@ -36,6 +39,17 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "eslint --fix",
+      "cross-env CI=true react-scripts test --bail --ci --findRelatedTests"
+    ]
   },
   "eslintConfig": {
     "extends": "react-app"
